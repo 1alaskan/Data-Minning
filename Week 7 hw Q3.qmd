@@ -1,0 +1,115 @@
+---
+title: "Ch13 Q15 - Classification Tree"
+format: html
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier, export_text, plot_tree
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+```
+
+```{python}
+# Load and prep data
+df = pd.read_excel("Ch13_Q15_Data_File__1_.xlsx")
+df = df[['Educ','Income','Age','Sex','Married','Church']].dropna()
+df['Sex'] = df['Sex'].map({'F':0, 'M':1})
+df['Married'] = df['Married'].map({'N':0, 'Y':1})
+
+X = df[['Educ','Income','Age','Sex','Married']]
+y = df['Church']
+
+# 70/30 split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=321)
+```
+
+## Part a-1: Best-Pruned Tree
+
+```{python}
+# Step 1: Tune max_depth and min_samples_leaf
+param_grid1 = {
+    'max_depth': range(1, 11),
+    'min_samples_leaf': range(1, 11)
+}
+grid1 = GridSearchCV(DecisionTreeClassifier(random_state=321),
+                     param_grid1, scoring='accuracy', cv=10, n_jobs=-1)
+grid1.fit(X_train, y_train)
+
+# Step 2: Tune ccp_alpha
+tree_temp = DecisionTreeClassifier(
+    max_depth=grid1.best_params_['max_depth'],
+    min_samples_leaf=grid1.best_params_['min_samples_leaf'],
+    random_state=321)
+tree_temp.fit(X_train, y_train)
+path = tree_temp.cost_complexity_pruning_path(X_train, y_train)
+
+grid2 = GridSearchCV(
+    DecisionTreeClassifier(
+        max_depth=grid1.best_params_['max_depth'],
+        min_samples_leaf=grid1.best_params_['min_samples_leaf'],
+        random_state=321),
+    {'ccp_alpha': path['ccp_alphas']},
+    scoring='accuracy', cv=10, n_jobs=-1)
+grid2.fit(X_train, y_train)
+
+best_tree = grid2.best_estimator_
+print(f"Best parameters: depth={grid1.best_params_['max_depth']}, "
+      f"min_leaf={grid1.best_params_['min_samples_leaf']}, "
+      f"ccp_alpha={grid2.best_params_['ccp_alpha']:.6f}")
+print(f"\nNumber of leaf nodes: {best_tree.get_n_leaves()}")
+```
+
+## Part a-2: Tree Rules
+
+```{python}
+print(export_text(best_tree, feature_names=list(X.columns)))
+```
+
+## Part b: Performance Metrics on Test Data
+
+```{python}
+y_pred = best_tree.predict(X_test)
+cm = confusion_matrix(y_test, y_pred)
+TN, FP, FN, TP = cm.ravel()
+
+accuracy = round((TP + TN) / len(y_test), 2)
+specificity = round(TN / (TN + FP), 2)
+sensitivity = round(TP / (TP + FN), 2)
+precision = round(TP / (TP + FP), 2)
+
+print(f"Accuracy:    {accuracy}")
+print(f"Specificity: {specificity}")
+print(f"Sensitivity: {sensitivity}")
+print(f"Precision:   {precision}")
+```
+
+## Part c: ROC Curve and AUC
+
+```{python}
+y_prob = best_tree.predict_proba(X_test)[:, 1]
+auc = round(roc_auc_score(y_test, y_prob), 4)
+print(f"AUC value: {auc}")
+
+fpr, tpr, _ = roc_curve(y_test, y_prob)
+plt.figure()
+plt.plot(fpr, tpr, label=f'AUC = {auc}')
+plt.plot([0,1],[0,1],'--', color='gray')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend()
+plt.show()
+```
+
+## Part d: Score Full Dataset
+
+```{python}
+y_prob_all = best_tree.predict_proba(X)[:, 1]
+pct = round((y_prob_all >= 0.5).sum() / len(y_prob_all) * 100, 2)
+print(f"Percent likely to go to church (cutoff 0.5): {pct}%")
+```
