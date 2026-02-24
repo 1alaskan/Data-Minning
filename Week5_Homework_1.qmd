@@ -1,0 +1,261 @@
+---
+title: "Week 5 Python"
+format: html
+---
+
+# Q1
+
+# a
+
+```{python}
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+
+path = r"C:\Users\spink\OneDrive\Desktop\Data Minning\Data"
+myData = pd.read_excel(f"{path}\Ch12_Q1_Data_File.xlsx")
+
+X = myData[["x1", "x2"]]
+y = myData["y"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=321)
+
+param_grid = {"n_neighbors": list(range(1, 11))}
+knn = KNeighborsClassifier()
+grid_search = GridSearchCV(knn, param_grid, cv=10, scoring="accuracy")
+grid_search.fit(X_train, y_train)
+
+print(grid_search.best_params_["n_neighbors"])
+```
+
+# b1
+
+```{python}
+from sklearn.metrics import confusion_matrix
+
+best_knn = grid_search.best_estimator_
+y_pred = best_knn.predict(X_test)
+
+cm = confusion_matrix(y_test, y_pred)
+TN = cm[0][0]
+FP = cm[0][1]
+FN = cm[1][0]
+TP = cm[1][1]
+
+print(round((TP + TN) / (TP + TN + FP + FN), 2))
+print(round(TN / (TN + FP), 2))
+print(round(TP / (TP + FN), 2))
+print(round(TP / (TP + FP), 2))
+```
+
+# c
+
+```{python}
+from sklearn.metrics import roc_auc_score
+
+y_prob = best_knn.predict_proba(X_test)[:, 1]
+auc = roc_auc_score(y_test, y_prob)
+print(round(auc, 4))
+```
+
+
+# Quesion 2
+
+# a:
+
+```{python}
+myData = pd.read_excel(f"{path}\Ch12_Q8_Data_File.xlsx")
+
+X = myData[["GPA", "SAT"]]
+y = myData["Admit"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=321)
+
+param_grid = {"n_neighbors": list(range(1, 11))}
+knn = KNeighborsClassifier()
+grid_search = GridSearchCV(knn, param_grid, cv=10, scoring="accuracy")
+grid_search.fit(X_train, y_train)
+
+print(grid_search.best_params_["n_neighbors"])
+```
+
+## Part b-1: Metrics on test data
+
+```{python}
+best_knn = grid_search.best_estimator_
+y_pred = best_knn.predict(X_test)
+
+cm = confusion_matrix(y_test, y_pred)
+TN = cm[0][0]
+FP = cm[0][1]
+FN = cm[1][0]
+TP = cm[1][1]
+
+print(round((TP + TN) / (TP + TN + FP + FN), 2))
+print(round(TN / (TN + FP), 2))
+print(round(TP / (TP + FN), 2))
+print(round(TP / (TP + FP), 2))
+```
+
+# c
+
+```{python}
+y_prob = best_knn.predict_proba(X_test)[:, 1]
+auc = roc_auc_score(y_test, y_prob)
+print(round(auc, 4))
+```
+
+# d
+
+```{python}
+scoreData = pd.read_excel(f"{path}\Ch12_Q8_Score_File.xlsx")
+score_pred = best_knn.predict(scoreData)
+print(score_pred)
+```
+
+
+# Q3
+
+# a
+
+```{python}
+from sklearn.naive_bayes import GaussianNB
+
+myData = pd.read_excel(f"{path}\Ch12_Q20_Data_File.xlsx")
+
+X = myData[["x1", "x2", "x3"]]
+y = myData["y"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=321)
+
+nb = GaussianNB()
+nb.fit(X_train, y_train)
+
+y_pred = nb.predict(X_test)
+
+cm = confusion_matrix(y_test, y_pred, labels=["Yes", "No"])
+TP = cm[0][0]
+FN = cm[0][1]
+FP = cm[1][0]
+TN = cm[1][1]
+
+print(round((TP + TN) / (TP + TN + FP + FN), 2))
+print(round(TN / (TN + FP), 2))
+print(round(TP / (TP + FN), 2))
+print(round(TP / (TP + FP), 2))
+```
+
+# b
+
+```{python}
+import numpy as np
+
+yes_index = list(nb.classes_).index("Yes")
+y_prob_yes = nb.predict_proba(X_test)[:, yes_index]
+
+lift_df = pd.DataFrame({"actual": y_test.values, "prob_yes": y_prob_yes})
+lift_df = lift_df.sort_values("prob_yes", ascending=False).reset_index(drop=True)
+
+n = len(lift_df)
+decile_size = n // 10
+overall_rate = (lift_df["actual"] == "Yes").mean()
+
+first_decile = lift_df.iloc[0:decile_size]
+first_rate = (first_decile["actual"] == "Yes").mean()
+first_lift = first_rate / overall_rate
+print(round(first_lift, 2))
+```
+
+# c
+
+```{python}
+y_binary = (y_test == "Yes").astype(int)
+auc = roc_auc_score(y_binary, y_prob_yes)
+print(round(auc, 4))
+```
+
+# d
+
+```{python}
+scoreData = pd.read_excel(f"{path}\Ch12_Q20_Score_File.xlsx")
+score_pred = nb.predict(scoreData)
+print(score_pred)
+```
+
+
+# Q4
+
+# a
+
+```{python}
+myData = pd.read_excel(f"{path}\Ch12_Q35_Data_File.xlsx")
+
+myData["Binned_Age"] = pd.cut(myData["Age"], bins=[21, 45, 86], labels=[1, 2], include_lowest=True)
+myData["Binned_Income"] = pd.cut(myData["Income"], bins=[-1, 85000, 300001], labels=[1, 2], include_lowest=True)
+
+print(myData[["Age", "Binned_Age", "Income", "Binned_Income"]].head(2))
+```
+
+# b
+
+```{python}
+X = myData[["Own", "Children", "Binned_Age", "Binned_Income"]].astype(int)
+y = myData["Rental"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=321)
+
+nb = GaussianNB()
+nb.fit(X_train, y_train)
+
+y_pred = nb.predict(X_test)
+
+cm = confusion_matrix(y_test, y_pred, labels=[1, 0])
+TP = cm[0][0]
+FN = cm[0][1]
+FP = cm[1][0]
+TN = cm[1][1]
+
+print(round((TP + TN) / (TP + TN + FP + FN), 2))
+print(round(TN / (TN + FP), 2))
+print(round(TP / (TP + FN), 2))
+print(round(TP / (TP + FP), 2))
+```
+
+# c1
+
+```{python}
+pos_index = list(nb.classes_).index(1)
+y_prob_full = nb.predict_proba(myData[["Own", "Children", "Binned_Age", "Binned_Income"]].astype(int))[:, pos_index]
+
+lift_df = pd.DataFrame({"actual": myData["Rental"].values, "prob": y_prob_full})
+lift_df = lift_df.sort_values("prob", ascending=False).reset_index(drop=True)
+
+top200 = lift_df.iloc[:200]
+print((top200["actual"] == 1).sum())
+```
+
+# c2
+
+```{python}
+pos_index = list(nb.classes_).index(1)
+y_prob_pos = nb.predict_proba(X_test)[:, pos_index]
+
+lift_df = pd.DataFrame({"actual": y_test.values, "prob": y_prob_pos})
+lift_df = lift_df.sort_values("prob", ascending=False).reset_index(drop=True)
+
+n = len(lift_df)
+decile_size = n // 10
+overall_rate = (lift_df["actual"] == 1).mean()
+
+first_decile = lift_df.iloc[0:decile_size]
+first_rate = (first_decile["actual"] == 1).mean()
+first_lift = first_rate / overall_rate
+print(round(first_lift, 2))
+```
+
+# d
+
+```{python}
+auc = roc_auc_score(y_test, y_prob_pos)
+print(round(auc, 4))
+```
