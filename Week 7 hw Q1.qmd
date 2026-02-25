@@ -1,0 +1,42 @@
+---
+title: "Ch13 Q2 - Decision Tree Split Values"
+format: html
+jupyter: python3
+---
+
+## Load Data
+
+```{python}
+import pandas as pd
+
+df = pd.read_excel(r'C:\Users\spink\Downloads\Ch13_Q2_V11_Data_File.xlsx')
+df
+```
+
+## a. Highest and Lowest Split Values for Days
+
+Split values are the midpoints between consecutive sorted unique values.
+
+```{python}
+days_sorted = sorted(df['Days'].unique())
+days_splits = [(days_sorted[i] + days_sorted[i+1]) / 2 for i in range(len(days_sorted) - 1)]
+
+print("Sorted Days values:", days_sorted)
+print("Possible split values:", [round(s, 1) for s in days_splits])
+print()
+print(f"Highest split value: {round(max(days_splits), 1)}")
+print(f"Lowest split value:  {round(min(days_splits), 1)}")
+```
+
+## b. Highest and Lowest Split Values for Precipitation
+
+```{python}
+precip_sorted = sorted(df['Precipitation'].unique())
+precip_splits = [(precip_sorted[i] + precip_sorted[i+1]) / 2 for i in range(len(precip_sorted) - 1)]
+
+print("Sorted Precipitation values:", precip_sorted)
+print("Possible split values:", [round(s, 1) for s in precip_splits])
+print()
+print(f"Highest split value: {round(max(precip_splits), 1)}")
+print(f"Lowest split value:  {round(min(precip_splits), 1)}")
+```
