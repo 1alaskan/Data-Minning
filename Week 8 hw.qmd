@@ -1,0 +1,329 @@
+---
+title: "hw 8"
+format: html
+jupyter: python3
+---
+
+
+### Setup and Data Loading
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeRegressor, _tree
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+myData = pd.read_excel(r"C:\Users\spink\OneDrive\Desktop\Data Minning\Data\Ch13_Q36_Data_File.xlsx")
+
+myData['College']    = (myData['College']    == 'Yes').astype(int)
+myData['CreditCard'] = (myData['CreditCard'] == 'Yes').astype(int)
+
+X = myData[['College', 'CreditCard', 'FoodSpend', 'Income']]
+y = myData['TravelSpend']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.30, random_state=321
+)
+
+param_grid = {
+    'max_depth':        list(range(1, 11)),
+    'min_samples_leaf': list(range(1, 11))
+}
+
+grid_search = GridSearchCV(
+    DecisionTreeRegressor(random_state=321),
+    param_grid,
+    cv=10,
+    scoring='neg_root_mean_squared_error'
+)
+grid_search.fit(X_train, y_train)
+
+best_params = grid_search.best_params_
+print("Best Parameters:", best_params)
+
+best_tree = grid_search.best_estimator_
+```
+
+### a1 Number of Leaf Nodes
+
+```{python}
+n_leaves = best_tree.get_n_leaves()
+print(f"Number of leaf nodes in best-pruned tree: {n_leaves}")
+```
+
+### a2. Root Node Rules
+
+```{python}
+tree_       = best_tree.tree_
+feat_names  = ['College', 'CreditCard', 'FoodSpend', 'Income']
+root_feat   = feat_names[tree_.feature[0]]
+root_thresh = tree_.threshold[0]
+left_mean   = tree_.value[tree_.children_left[0]][0][0]
+right_mean  = tree_.value[tree_.children_right[0]][0][0]
+
+print(f"Root split: {root_feat} <= {root_thresh:.1f}")
+print(f"Left  child mean (CreditCard <= 0.5): {left_mean:.3f}")
+print(f"Right child mean (CreditCard >  0.5): {right_mean:.3f}")
+```
+
+### b. RMSE and MaD on Test Data
+
+```{python}
+y_pred_test = best_tree.predict(X_test)
+
+rmse = np.sqrt(mean_squared_error(y_test, y_pred_test))
+mad  = mean_absolute_error(y_test, y_pred_test)
+
+print(f"RMSE on test data: {rmse:.4f}")
+print(f"MAD  on test data: {mad:.4f}")
+```
+
+### c. Score two New Customers
+
+```{python}
+scoreData = pd.read_excel(r"C:\Users\spink\OneDrive\Desktop\Data Minning\Data\Ch13_Q36_Score_File.xlsx")
+
+scoreData['College']    = (scoreData['College']    == 'Yes').astype(int)
+scoreData['CreditCard'] = (scoreData['CreditCard'] == 'Yes').astype(int)
+
+X_score     = scoreData[['College', 'CreditCard', 'FoodSpend', 'Income']]
+predictions = best_tree.predict(X_score)
+
+print(f"Predicted annual travel spending for the first  customer: {predictions[0]:.2f}")
+print(f"Predicted annual travel spending for the second customer: {predictions[1]:.2f}")
+```
+
+---
+
+## q2
+
+### Setup and Data Loading
+
+```{python}
+import pandas as pd
+import numpy as np
+
+myData = pd.read_excel(r"C:\Users\spink\OneDrive\Desktop\Data Minning\Data\Ch13_Q26_V09_Data_File.xlsx")
+```
+
+### a
+
+```{python}
+x1_sorted = sorted(myData['x1'].unique())
+x1_splits = [(x1_sorted[i] + x1_sorted[i+1]) / 2 for i in range(len(x1_sorted) - 1)]
+print(f"x1 split values: {[round(s, 1) for s in x1_splits]}")
+print(f"Highest: {round(max(x1_splits), 1)},  Lowest: {round(min(x1_splits), 1)}")
+```
+
+### b
+
+```{python}
+x2_sorted = sorted(myData['x2'].unique())
+x2_splits = [(x2_sorted[i] + x2_sorted[i+1]) / 2 for i in range(len(x2_sorted) - 1)]
+print(f"x2 split values: {[round(s, 1) for s in x2_splits]}")
+print(f"Highest: {round(max(x2_splits), 1)},  Lowest: {round(min(x2_splits), 1)}")
+```
+
+### c
+
+```{python}
+x3_sorted = sorted(myData['x3'].unique())
+x3_splits = [(x3_sorted[i] + x3_sorted[i+1]) / 2 for i in range(len(x3_sorted) - 1)]
+print(f"x3 split values: {[round(s, 2) for s in x3_splits]}")
+print(f"Highest: {round(max(x3_splits), 2)},  Lowest: {round(min(x3_splits), 2)}")
+```
+
+### d
+
+```{python}
+def compute_mse(data, feature, split_val):
+    left  = data[data[feature] <= split_val]['y']
+    right = data[data[feature] >  split_val]['y']
+    mse_left  = ((left  - left.mean())**2).sum()
+    mse_right = ((right - right.mean())**2).sum()
+    return (mse_left + mse_right) / len(data)
+
+mse_d = compute_mse(myData, 'x1', 252)
+print(f"MSE for x1 = 252: {round(mse_d, 4)}")
+```
+
+### e
+
+```{python}
+mse_e = compute_mse(myData, 'x2', 92.5)
+print(f"MSE for x2 = 92.5: {round(mse_e, 4)}")
+```
+
+### f
+
+```{python}
+mse_f = compute_mse(myData, 'x3', 14.25)
+print(f"MSE for x3 = 14.25: {round(mse_f, 4)}")
+```
+
+### g
+
+```{python}
+print(f"MSE summary — x1=252: {mse_d}, x2=92.5: {mse_e}, x3=14.25: {mse_f}")
+print("Lowest MSE = x1=252 (51.25) => best split for purity")
+```
+
+---
+
+## q 3
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import accuracy_score, roc_auc_score, confusion_matrix
+
+myData = pd.read_excel(r"C:\Users\spink\OneDrive\Desktop\Data Minning\Data\Ch13_Q48_V19_Data_File.xlsx")
+
+X = myData[['x1', 'x2', 'x3', 'x4']]
+y = myData['y']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.40, random_state=321
+)
+
+param_grid = {
+    'n_estimators': [100, 250, 500, 1000],
+    'max_depth':    list(range(1, 11))
+}
+
+grid_search = GridSearchCV(
+    RandomForestClassifier(max_features=2, random_state=321),
+    param_grid,
+    cv=10,
+    scoring='accuracy'
+)
+grid_search.fit(X_train, y_train)
+
+print("Best Parameters:", grid_search.best_params_)
+
+best_rf = grid_search.best_estimator_
+```
+
+### a
+
+```{python}
+y_pred = best_rf.predict(X_test)
+y_prob = best_rf.predict_proba(X_test)[:, 1]
+
+cm = confusion_matrix(y_test, y_pred)
+TN, FP, FN, TP = cm.ravel()
+
+accuracy    = (TP + TN) / len(y_test)
+sensitivity = TP / (TP + FN)
+specificity = TN / (TN + FP)
+
+print(f"Accuracy:    {round(accuracy, 2)}")
+print(f"Sensitivity: {round(sensitivity, 2)}")
+print(f"Specificity: {round(specificity, 2)}")
+```
+
+### b
+
+```{python}
+auc = roc_auc_score(y_test, y_prob)
+print(f"AUC: {round(auc, 4)}")
+```
+
+### c
+
+```{python}
+importances = pd.Series(best_rf.feature_importances_, index=['x1', 'x2', 'x3', 'x4'])
+print(f"Feature importances:\n{importances}")
+print(f"Most important predictor: {importances.idxmax()}")
+```
+
+### d
+
+```{python}
+new_rec    = pd.DataFrame({'x1': [3.45], 'x2': [1], 'x3': [18], 'x4': [5.80]})
+pred_class = best_rf.predict(new_rec)[0]
+pred_prob  = best_rf.predict_proba(new_rec)[0][1]
+
+print(f"Predicted class:        {pred_class}")
+print(f"Probability of Class 1: {round(pred_prob, 2)}")
+```
+
+---
+
+## q4
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import confusion_matrix, roc_auc_score
+
+myData = pd.read_excel(r"C:\Users\spink\OneDrive\Desktop\Data Minning\Data\Ch13_Q54_Data_File.xlsx")
+
+X = myData[['Age', 'Systolic', 'Diastolic', 'BMI']]
+y = myData['Disease']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.40, random_state=321
+)
+
+param_grid = {
+    'n_estimators': [100, 250, 500, 1000],
+    'max_depth':    list(range(1, 11))
+}
+
+gs = GridSearchCV(
+    RandomForestClassifier(max_features=4, random_state=321),
+    param_grid, cv=10, scoring='accuracy', n_jobs=-1
+)
+gs.fit(X_train, y_train)
+print("Best Parameters:", gs.best_params_)
+```
+
+### a
+
+```{python}
+y_pred = gs.predict(X_test)
+y_prob = gs.predict_proba(X_test)[:, 1]
+TN, FP, FN, TP = confusion_matrix(y_test, y_pred).ravel()
+
+print(f"Accuracy:    {round((TP+TN)/len(y_test), 2)}")
+print(f"Sensitivity: {round(TP/(TP+FN), 2)}")
+print(f"Specificity: {round(TN/(TN+FP), 2)}")
+```
+
+### b
+
+```{python}
+from sklearn.ensemble import GradientBoostingClassifier
+
+gs_boost = GridSearchCV(
+    GradientBoostingClassifier(random_state=321),
+    param_grid, cv=10, scoring='accuracy', n_jobs=-1
+)
+gs_boost.fit(X_train, y_train)
+print("Boosting Best Parameters:", gs_boost.best_params_)
+
+y_pred_b = gs_boost.predict(X_test)
+y_prob_b = gs_boost.predict_proba(X_test)[:, 1]
+TN, FP, FN, TP = confusion_matrix(y_test, y_pred_b).ravel()
+
+print(f"Accuracy:    {round((TP+TN)/len(y_test), 2)}")
+print(f"Sensitivity: {round(TP/(TP+FN), 2)}")
+print(f"Specificity: {round(TN/(TN+FP), 2)}")
+
+boost_auc = roc_auc_score(y_test, y_prob_b)
+print(f"Boosting AUC: {round(boost_auc, 4)}")
+```
+
+### c 
+
+```{python}
+bag_auc = roc_auc_score(y_test, y_prob)
+print(f"Bagging AUC = {round(bag_auc, 4)},  Boosting AUC = {round(boost_auc, 4)}")
+print("Boosting AUC > Bagging AUC => Boosting ensemble model is more robust")
+```
