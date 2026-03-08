@@ -1,0 +1,216 @@
+---
+title: "HW 9"
+format: html
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from scipy.cluster.hierarchy import linkage, fcluster, dendrogram
+from scipy.spatial.distance import pdist
+import matplotlib.pyplot as plt
+
+path = r"C:\Users\spink\OneDrive\Desktop\Data Minning\Data"
+```
+
+## Question 1
+
+Part a
+
+```{python}
+myData = pd.read_excel(f"{path}\\Ch14_Q1_V18_Data_File.xlsx")
+
+myData_scaled = (myData - myData.mean()) / myData.std(ddof=1)
+dist_matrix = pdist(myData_scaled, metric='euclidean')
+
+hc_single = linkage(dist_matrix, method='single')
+
+plt.figure(figsize=(10, 5))
+dendrogram(hc_single)
+plt.axhline(y=5, color='red', linestyle='--')
+plt.title("Dendrogram - Single Linkage")
+plt.tight_layout()
+plt.show()
+
+labels_a = fcluster(hc_single, t=5, criterion='distance')
+print(len(set(labels_a)))
+```
+
+Part b
+
+```{python}
+hc_complete = linkage(dist_matrix, method='complete')
+
+plt.figure(figsize=(10, 5))
+dendrogram(hc_complete)
+plt.axhline(y=5, color='red', linestyle='--')
+plt.title("Dendrogram - Complete Linkage")
+plt.tight_layout()
+plt.show()
+
+labels_b = fcluster(hc_complete, t=5, criterion='distance')
+print(len(set(labels_b)))
+```
+
+Part c
+
+```{python}
+hc_ward = linkage(dist_matrix, method='ward')
+
+plt.figure(figsize=(10, 5))
+dendrogram(hc_ward)
+plt.axhline(y=5, color='red', linestyle='--')
+plt.title("Dendrogram - Ward's Method")
+plt.tight_layout()
+plt.show()
+
+labels_c = fcluster(hc_ward, t=5, criterion='distance')
+print(len(set(labels_c)))
+```
+
+## Question 2
+
+Part a
+
+```{python}
+myData = pd.read_excel(f"{path}\\Ch14_Q9_V3_Data_File.xlsx")
+
+X = myData[['Earnings', 'Cost', 'Grad', 'Debt']]
+X_scaled = (X - X.mean()) / X.std(ddof=1)
+
+dist_matrix = pdist(X_scaled, metric='euclidean')
+hc = linkage(dist_matrix, method='ward')
+
+plt.figure(figsize=(10, 5))
+dendrogram(hc)
+plt.axhline(y=15, color='red', linestyle='--')
+plt.title("Dendrogram - All Colleges, Ward's Method")
+plt.tight_layout()
+plt.show()
+
+labels_a = fcluster(hc, t=15, criterion='distance')
+print(len(set(labels_a)))
+```
+
+Part b
+
+```{python}
+city_data = myData[myData['City'] == 1][['Earnings', 'Cost', 'Grad', 'Debt']]
+X_city = (city_data - city_data.mean()) / city_data.std(ddof=1)
+
+dist_city = pdist(X_city, metric='euclidean')
+hc_city = linkage(dist_city, method='ward')
+
+plt.figure(figsize=(10, 5))
+dendrogram(hc_city)
+plt.axhline(y=10, color='red', linestyle='--')
+plt.title("Dendrogram - City Colleges, Ward's Method")
+plt.tight_layout()
+plt.show()
+
+labels_b = fcluster(hc_city, t=10, criterion='distance')
+print(len(set(labels_b)))
+```
+
+Part c
+
+```{python}
+noncity_data = myData[myData['City'] == 0][['Earnings', 'Cost', 'Grad', 'Debt']]
+X_non = (noncity_data - noncity_data.mean()) / noncity_data.std(ddof=1)
+
+dist_non = pdist(X_non, metric='euclidean')
+hc_non = linkage(dist_non, method='ward')
+
+plt.figure(figsize=(10, 5))
+dendrogram(hc_non)
+plt.axhline(y=10, color='red', linestyle='--')
+plt.title("Dendrogram - Non-City Colleges, Ward's Method")
+plt.tight_layout()
+plt.show()
+
+labels_c = fcluster(hc_non, t=10, criterion='distance')
+print(len(set(labels_c)))
+```
+
+## Question 3
+
+Part a
+
+```{python}
+myData = pd.read_excel(f"{path}\\Ch14_Q25_Data_File_Static.xlsx")
+
+X = myData[['x1', 'x2', 'x3']]
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+km2 = KMeans(n_clusters=2, random_state=321, n_init=10)
+km2.fit(X_scaled)
+
+counts2 = np.bincount(km2.labels_)
+largest2 = np.argmax(counts2)
+centers2 = km2.cluster_centers_[largest2]
+
+print(f"Larger cluster size: {counts2[largest2]}")
+print(f"Cluster center x1: {centers2[0]:.2f}")
+print(f"Cluster center x2: {centers2[1]:.2f}")
+print(f"Cluster center x3: {centers2[2]:.2f}")
+```
+
+Part b
+
+```{python}
+km3 = KMeans(n_clusters=3, random_state=321, n_init=10)
+km3.fit(X_scaled)
+
+counts3 = np.bincount(km3.labels_)
+smallest3 = np.argmin(counts3)
+centers3 = km3.cluster_centers_[smallest3]
+
+print(f"Smallest cluster size: {counts3[smallest3]}")
+print(f"Cluster center x1: {centers3[0]:.2f}")
+print(f"Cluster center x2: {centers3[1]:.2f}")
+print(f"Cluster center x3: {centers3[2]:.2f}")
+```
+
+## Question 4
+
+Part a
+
+```{python}
+myData = pd.read_excel(f"{path}\\Ch14_Q33_Data_File.xlsx")
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(myData)
+
+km3 = KMeans(n_clusters=3, random_state=321, n_init=10)
+km3.fit(X_scaled)
+
+counts3 = np.bincount(km3.labels_)
+largest3 = np.argmax(counts3)
+c3 = km3.cluster_centers_[largest3]
+
+print(f"Largest cluster size: {counts3[largest3]}")
+print(f"Cluster center Price: {c3[0]:.1f}")
+print(f"Cluster center Beds:  {c3[1]:.1f}")
+print(f"Cluster center Baths: {c3[2]:.1f}")
+print(f"Cluster center Sqft:  {c3[3]:.1f}")
+```
+
+Part b
+
+```{python}
+km4 = KMeans(n_clusters=4, random_state=321, n_init=10)
+km4.fit(X_scaled)
+
+counts4 = np.bincount(km4.labels_)
+largest4 = np.argmax(counts4)
+c4 = km4.cluster_centers_[largest4]
+
+print(f"Largest cluster size: {counts4[largest4]}")
+print(f"Cluster center Price: {c4[0]:.1f}")
+print(f"Cluster center Beds:  {c4[1]:.1f}")
+print(f"Cluster center Baths: {c4[2]:.1f}")
+print(f"Cluster center Sqft:  {c4[3]:.1f}")
+```
